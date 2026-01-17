@@ -1,4 +1,6 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { X } from "lucide-react";
 
 // Import all ASL alphabet images
 import aslA from "@/assets/asl/a.png";
@@ -58,6 +60,8 @@ const alphabetSigns = [
 ];
 
 const ASLAlphabetSection = () => {
+  const [selectedSign, setSelectedSign] = useState<typeof alphabetSigns[0] | null>(null);
+
   return (
     <section className="py-20 px-4 bg-gradient-to-b from-background to-muted/30">
       <div className="container mx-auto max-w-7xl">
@@ -92,6 +96,7 @@ const ASLAlphabetSection = () => {
               viewport={{ once: true }}
               whileHover={{ scale: 1.05, y: -5 }}
               className="group relative"
+              onClick={() => setSelectedSign(sign)}
             >
               <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:border-primary/50 transition-all duration-300 cursor-pointer">
                 <div className="relative aspect-square bg-white">
@@ -122,10 +127,67 @@ const ASLAlphabetSection = () => {
           className="mt-12 text-center"
         >
           <p className="text-muted-foreground text-sm">
-            Hover over each letter to see how to form the hand shape. Practice daily to build muscle memory!
+            Click on any letter to see a larger view. Practice daily to build muscle memory!
           </p>
         </motion.div>
       </div>
+
+      {/* Enlarged Modal */}
+      <AnimatePresence>
+        {selectedSign && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
+            onClick={() => setSelectedSign(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="relative bg-card rounded-2xl border border-border shadow-2xl max-w-lg w-full overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close button */}
+              <button
+                onClick={() => setSelectedSign(null)}
+                className="absolute top-4 right-4 z-10 p-2 rounded-full bg-background/80 hover:bg-background transition-colors"
+              >
+                <X className="w-5 h-5 text-foreground" />
+              </button>
+
+              {/* Image */}
+              <div className="relative aspect-square bg-white">
+                <img
+                  src={selectedSign.image}
+                  alt={`ASL sign for letter ${selectedSign.letter}`}
+                  className="w-full h-full object-contain p-8"
+                />
+                <div className="absolute top-4 left-4 w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-2xl shadow-lg">
+                  {selectedSign.letter}
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="p-6 bg-gradient-to-b from-card to-muted/30">
+                <h3 className="text-2xl font-bold text-foreground mb-2">
+                  Letter {selectedSign.letter}
+                </h3>
+                <p className="text-lg text-muted-foreground">
+                  {selectedSign.description}
+                </p>
+                <div className="mt-4 p-4 rounded-xl bg-primary/10 border border-primary/20">
+                  <p className="text-sm text-foreground">
+                    <span className="font-semibold">Tip:</span> Practice forming this hand shape slowly at first, then increase speed as you become comfortable.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 };

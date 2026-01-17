@@ -1,10 +1,10 @@
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import FeaturesSection from "@/components/FeaturesSection";
-import CommunitySection from "@/components/CommunitySection";
 import SafetyAlertsPanel from "@/components/SafetyAlertsPanel";
 import EmergencySignPanel from "@/components/EmergencySignPanel";
 import ASLAlphabetSection from "@/components/ASLAlphabetSection";
+import CommunitySection from "@/components/CommunitySection";
 import Footer from "@/components/Footer";
 
 const Index = () => {
@@ -14,10 +14,10 @@ const Index = () => {
       <main>
         <HeroSection />
         <FeaturesSection />
-        <CommunitySection />
         <SafetyAlertsPanel />
         <EmergencySignPanel />
         <ASLAlphabetSection />
+        <CommunitySection />
       </main>
       <Footer />
     </div>
