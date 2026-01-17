@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { AlertTriangle, MapPin, Send, Phone, Users, Shield } from "lucide-react";
+import { AlertTriangle, MapPin, Send, Phone, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const emergencySigns = [
@@ -87,13 +87,6 @@ const EmergencySignPanel = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3 p-4 rounded-xl bg-accent/10 border border-accent/20">
-                    <Users className="w-5 h-5 text-accent mt-0.5" />
-                    <div>
-                      <p className="font-medium text-foreground">Video Clip Attached</p>
-                      <p className="text-sm text-muted-foreground">Last 10 seconds recorded</p>
-                    </div>
-                  </div>
                 </div>
               </div>
 

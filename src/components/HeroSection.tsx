@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Play, ArrowRight, Video, Mic, MessageSquare } from "lucide-react";
+import { Link } from "react-router-dom";
 import CameraPreview from "./CameraPreview";
 
 const HeroSection = () => {
@@ -47,36 +48,16 @@ const HeroSection = () => {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-12">
-              <Button variant="hero" size="xl">
-                Start Translating
-                <ArrowRight className="w-5 h-5" />
-              </Button>
+              <Link to="/translate">
+                <Button variant="hero" size="xl">
+                  Start Translating
+                  <ArrowRight className="w-5 h-5" />
+                </Button>
+              </Link>
               <Button variant="glass" size="xl">
                 <Play className="w-5 h-5" />
                 Watch Demo
               </Button>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-6 pt-8 border-t border-border">
-              {[
-                { value: "98%", label: "Accuracy" },
-                { value: "<100ms", label: "Latency" },
-                { value: "50+", label: "Sign dialects" },
-              ].map((stat, index) => (
-                <motion.div
-                  key={stat.label}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 + index * 0.1 }}
-                  className="text-center lg:text-left"
-                >
-                  <div className="text-2xl md:text-3xl font-bold font-display text-foreground">
-                    {stat.value}
-                  </div>
-                  <div className="text-sm text-muted-foreground">{stat.label}</div>
-                </motion.div>
-              ))}
             </div>
           </motion.div>
 

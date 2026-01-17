@@ -1,15 +1,14 @@
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { 
   MessageSquare, 
   Users, 
   Brain, 
-  Globe, 
   Shield, 
   Zap,
   Video,
   Phone,
-  Building2,
-  Heart
+  Building2
 } from "lucide-react";
 
 const features = [
@@ -84,84 +83,65 @@ const FeaturesSection = () => {
             const Icon = feature.icon;
             
             return (
-              <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                whileHover={{ y: -5, transition: { duration: 0.2 } }}
-                className="group relative bg-card rounded-2xl p-6 border border-border hover:border-primary/30 hover:shadow-xl transition-all duration-300"
-              >
-                {/* Icon */}
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                  <Icon className="w-6 h-6 text-white" />
-                </div>
+              <Link to="/translate" key={feature.title}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  whileHover={{ y: -5, transition: { duration: 0.2 } }}
+                  className="group relative bg-card rounded-2xl p-6 border border-border hover:border-primary/30 hover:shadow-xl transition-all duration-300 cursor-pointer h-full"
+                >
+                  {/* Icon */}
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                    <Icon className="w-6 h-6 text-white" />
+                  </div>
 
-                {/* Content */}
-                <h3 className="font-display text-xl font-semibold text-foreground mb-2">
-                  {feature.title}
-                </h3>
-                <p className="text-muted-foreground">
-                  {feature.description}
-                </p>
+                  {/* Content */}
+                  <h3 className="font-display text-xl font-semibold text-foreground mb-2">
+                    {feature.title}
+                  </h3>
+                  <p className="text-muted-foreground">
+                    {feature.description}
+                  </p>
 
-                {/* Hover gradient */}
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-              </motion.div>
+                  {/* Hover gradient */}
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                </motion.div>
+              </Link>
             );
           })}
         </div>
 
-        {/* Community & Safety highlight */}
+        {/* Safety card only */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          className="mt-12 grid md:grid-cols-2 gap-6"
+          className="mt-12"
         >
-          {/* Community card */}
-          <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl p-8 border border-primary/20">
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
-                  <Globe className="w-6 h-6 text-primary-foreground" />
+          <Link to="/translate">
+            <div className="relative overflow-hidden bg-gradient-to-br from-accent/10 to-accent/5 rounded-2xl p-8 border border-accent/20 hover:border-accent/40 transition-all cursor-pointer">
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center">
+                    <Shield className="w-6 h-6 text-accent-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-xl font-semibold text-foreground">
+                      Safety First
+                    </h3>
+                    <p className="text-sm text-muted-foreground">Your silent lifeline</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-display text-xl font-semibold text-foreground">
-                    Community Powered
-                  </h3>
-                  <p className="text-sm text-muted-foreground">Built with Deaf communities</p>
-                </div>
+                <p className="text-muted-foreground">
+                  Silent emergency signing, sound-to-visual alerts for doorbells, alarms, and more. In emergencies, the app becomes your safety net.
+                </p>
               </div>
-              <p className="text-muted-foreground">
-                Community corrections, regional signs, and human interpreter escalation when AI isn't enough. 50+ regional dialects including ASL, BSL, and Black ASL.
-              </p>
+              <Shield className="absolute -right-4 -bottom-4 w-32 h-32 text-accent/10" />
             </div>
-            <Heart className="absolute -right-4 -bottom-4 w-32 h-32 text-primary/10" />
-          </div>
-
-          {/* Safety card */}
-          <div className="relative overflow-hidden bg-gradient-to-br from-accent/10 to-accent/5 rounded-2xl p-8 border border-accent/20">
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center">
-                  <Shield className="w-6 h-6 text-accent-foreground" />
-                </div>
-                <div>
-                  <h3 className="font-display text-xl font-semibold text-foreground">
-                    Safety First
-                  </h3>
-                  <p className="text-sm text-muted-foreground">Your silent lifeline</p>
-                </div>
-              </div>
-              <p className="text-muted-foreground">
-                Silent emergency signing, sound-to-visual alerts for doorbells, alarms, and more. In emergencies, the app becomes your safety net.
-              </p>
-            </div>
-            <Shield className="absolute -right-4 -bottom-4 w-32 h-32 text-accent/10" />
-          </div>
+          </Link>
         </motion.div>
       </div>
     </section>
