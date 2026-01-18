@@ -7,6 +7,7 @@ import Translation from "./pages/Translation";
 import Safety from "./pages/Safety";
 import Feedback from "./pages/Feedback";
 import Translate from "./pages/Translate";
+import TextBase from "./pages/TextBase";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -19,6 +20,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Translation />} />
+          <Route path="/text-base" element={<TextBase />} />
           <Route path="/safety" element={<Safety />} />
           <Route path="/feedback" element={<Feedback />} />
           <Route path="/translate" element={<Translate />} />
