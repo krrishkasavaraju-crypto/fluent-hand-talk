@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, CameraOff, Settings, Maximize2, Hand, Loader2, X } from "lucide-react";
+import { Camera, CameraOff, Settings, Maximize2, Hand, X, Scan } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
@@ -51,7 +51,7 @@ const validSigns = [
 const CameraPreview = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
   const [recognizedSigns, setRecognizedSigns] = useState<string[]>([]);
   const [currentSign, setCurrentSign] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -61,41 +61,34 @@ const CameraPreview = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Simulated AI hand sign detection with validation
-  const detectHandSigns = useCallback(() => {
-    if (!isCameraOn) return;
-
-    // Simulate detection - 80% chance of valid sign, 20% chance of invalid
-    const isValidDetection = Math.random() > 0.2;
+  // Manual capture - user presses button when hands are ready
+  const captureSign = useCallback(() => {
+    if (!isCameraOn || isCapturing) return;
     
-    if (isValidDetection) {
-      const randomSign = validSigns[Math.floor(Math.random() * validSigns.length)];
-      setCurrentSign(randomSign);
+    setIsCapturing(true);
+    setCurrentSign(null);
+    
+    // Simulate brief detection delay
+    setTimeout(() => {
+      // Simulate detection - 80% chance of valid letter, 20% chance of invalid
+      const isValidDetection = Math.random() > 0.2;
       
-      // Add to recognized signs history
-      setRecognizedSigns(prev => {
-        const updated = [...prev, randomSign];
-        return updated.slice(-10); // Keep last 10 signs
-      });
-    } else {
-      // Invalid sign detected
-      setCurrentSign("INVALID");
-    }
-  }, [isCameraOn]);
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (isCameraOn && isAnalyzing) {
-      interval = setInterval(() => {
-        detectHandSigns();
-      }, 2500); // Detect every 2.5 seconds
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isCameraOn, isAnalyzing, detectHandSigns]);
+      if (isValidDetection) {
+        const randomSign = validSigns[Math.floor(Math.random() * validSigns.length)];
+        setCurrentSign(randomSign);
+        
+        // Add to recognized signs history
+        setRecognizedSigns(prev => {
+          const updated = [...prev, randomSign];
+          return updated.slice(-10); // Keep last 10 signs
+        });
+      } else {
+        // Invalid sign detected
+        setCurrentSign("INVALID");
+      }
+      setIsCapturing(false);
+    }, 800);
+  }, [isCameraOn, isCapturing]);
 
   const startCamera = useCallback(async () => {
     try {
@@ -108,7 +101,6 @@ const CameraPreview = () => {
         streamRef.current = stream;
         setIsCameraOn(true);
         setIsRecording(true);
-        setIsAnalyzing(true);
         setRecognizedSigns([]);
         setCurrentSign(null);
       }
@@ -127,7 +119,6 @@ const CameraPreview = () => {
     }
     setIsCameraOn(false);
     setIsRecording(false);
-    setIsAnalyzing(false);
     setCurrentSign(null);
   }, []);
 
@@ -270,14 +261,24 @@ const CameraPreview = () => {
                   Start Camera
                 </Button>
               ) : (
-                <Button
-                  onClick={stopCamera}
-                  variant="destructive"
-                  className="shadow-lg"
-                >
-                  <CameraOff className="w-4 h-4 mr-2" />
-                  Stop Camera
-                </Button>
+                <>
+                  <Button
+                    onClick={captureSign}
+                    disabled={isCapturing}
+                    className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg"
+                  >
+                    <Scan className={`w-4 h-4 mr-2 ${isCapturing ? 'animate-pulse' : ''}`} />
+                    {isCapturing ? 'Detecting...' : 'Capture Sign'}
+                  </Button>
+                  <Button
+                    onClick={stopCamera}
+                    variant="destructive"
+                    className="shadow-lg"
+                  >
+                    <CameraOff className="w-4 h-4 mr-2" />
+                    Stop
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -331,16 +332,9 @@ const CameraPreview = () => {
                     </div>
                   ) : (
                     <div className="text-muted-foreground">
-                      <motion.div
-                        animate={{ opacity: [0.4, 1, 0.4] }}
-                        transition={{ duration: 1.5, repeat: Infinity }}
-                        className="flex justify-center gap-1 mb-2"
-                      >
-                        <div className="w-2 h-2 rounded-full bg-primary" />
-                        <div className="w-2 h-2 rounded-full bg-primary" />
-                        <div className="w-2 h-2 rounded-full bg-primary" />
-                      </motion.div>
-                      <p className="text-sm">Waiting for signs...</p>
+                      <Hand className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Hold up your hand sign</p>
+                      <p className="text-xs mt-1">Press "Capture Sign" when ready</p>
                     </div>
                   )}
                 </div>
