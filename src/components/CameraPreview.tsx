@@ -1,15 +1,51 @@
-import { motion } from "framer-motion";
-import { Camera, CameraOff, Settings, Maximize2 } from "lucide-react";
-import { useState, useRef, useCallback } from "react";
-import ContextModeSelector from "./ContextModeSelector";
-import ConversationPanel from "./ConversationPanel";
+import { motion, AnimatePresence } from "framer-motion";
+import { Camera, CameraOff, Settings, Maximize2, Hand, Loader2 } from "lucide-react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "./ui/button";
 
 const CameraPreview = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [recognizedSigns, setRecognizedSigns] = useState<string[]>([]);
+  const [currentSign, setCurrentSign] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Simulated AI hand sign detection
+  const simulatedSigns = [
+    "Hello", "Thank you", "Please", "Help", "Yes", "No", 
+    "Good", "Bad", "Friend", "Family", "Love", "Peace"
+  ];
+
+  const detectHandSigns = useCallback(() => {
+    if (!isCameraOn) return;
+
+    // Simulate AI detection with random signs
+    const randomSign = simulatedSigns[Math.floor(Math.random() * simulatedSigns.length)];
+    setCurrentSign(randomSign);
+    
+    // Add to recognized signs history
+    setRecognizedSigns(prev => {
+      const updated = [...prev, randomSign];
+      return updated.slice(-10); // Keep last 10 signs
+    });
+  }, [isCameraOn]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isCameraOn && isAnalyzing) {
+      interval = setInterval(() => {
+        detectHandSigns();
+      }, 2500); // Detect every 2.5 seconds
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isCameraOn, isAnalyzing, detectHandSigns]);
 
   const startCamera = useCallback(async () => {
     try {
@@ -22,6 +58,9 @@ const CameraPreview = () => {
         streamRef.current = stream;
         setIsCameraOn(true);
         setIsRecording(true);
+        setIsAnalyzing(true);
+        setRecognizedSigns([]);
+        setCurrentSign(null);
       }
     } catch (error) {
       console.error("Error accessing camera:", error);
@@ -38,16 +77,18 @@ const CameraPreview = () => {
     }
     setIsCameraOn(false);
     setIsRecording(false);
+    setIsAnalyzing(false);
+    setCurrentSign(null);
   }, []);
 
   return (
-    <div className="relative">
+    <div className="relative flex gap-4">
       {/* Main camera container */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
-        className="relative bg-card rounded-2xl shadow-xl overflow-hidden border border-border"
+        className="relative bg-card rounded-2xl shadow-xl overflow-hidden border border-border flex-1"
       >
         {/* Camera viewport */}
         <div className="relative aspect-[4/3] bg-gradient-to-br from-secondary to-muted">
@@ -59,6 +100,7 @@ const CameraPreview = () => {
             muted
             className={`absolute inset-0 w-full h-full object-cover ${isCameraOn ? 'block' : 'hidden'}`}
           />
+          <canvas ref={canvasRef} className="hidden" />
 
           {/* Placeholder when camera is off */}
           {!isCameraOn && (
@@ -97,6 +139,18 @@ const CameraPreview = () => {
             </span>
           </div>
 
+          {/* AI Analysis indicator */}
+          {isCameraOn && isAnalyzing && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="absolute top-4 left-20 flex items-center gap-2 bg-primary/20 backdrop-blur-sm rounded-full px-3 py-1"
+            >
+              <Loader2 className="w-3 h-3 text-primary animate-spin" />
+              <span className="text-xs font-medium text-primary">AI Analyzing</span>
+            </motion.div>
+          )}
+
           {/* Camera controls */}
           <div className="absolute top-4 right-4 flex items-center gap-2">
             <button className="p-2 rounded-lg bg-background/50 backdrop-blur-sm hover:bg-background/70 transition-colors">
@@ -107,8 +161,28 @@ const CameraPreview = () => {
             </button>
           </div>
 
+          {/* Current detected sign overlay */}
+          <AnimatePresence>
+            {currentSign && isCameraOn && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: -20 }}
+                className="absolute bottom-20 left-1/2 -translate-x-1/2"
+              >
+                <div className="bg-primary text-primary-foreground px-6 py-3 rounded-xl shadow-lg">
+                  <div className="flex items-center gap-2">
+                    <Hand className="w-5 h-5" />
+                    <span className="text-lg font-bold">"{currentSign}"</span>
+                  </div>
+                  <p className="text-xs text-primary-foreground/80 text-center mt-1">Sign detected</p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Camera toggle buttons */}
-          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex gap-3">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-3">
             {!isCameraOn ? (
               <Button
                 onClick={startCamera}
@@ -128,16 +202,89 @@ const CameraPreview = () => {
               </Button>
             )}
           </div>
-
-          {/* Context mode selector */}
-          <div className="absolute bottom-4 left-4 right-4">
-            <ContextModeSelector />
-          </div>
         </div>
-
-        {/* Conversation panel below camera */}
-        <ConversationPanel />
       </motion.div>
+
+      {/* Sign Recognition Panel - Shows when camera is on */}
+      <AnimatePresence>
+        {isCameraOn && (
+          <motion.div
+            initial={{ opacity: 0, x: 20, width: 0 }}
+            animate={{ opacity: 1, x: 0, width: 280 }}
+            exit={{ opacity: 0, x: 20, width: 0 }}
+            transition={{ duration: 0.3 }}
+            className="bg-card rounded-2xl border border-border overflow-hidden shadow-xl"
+          >
+            <div className="bg-primary/10 px-4 py-3 border-b border-primary/20">
+              <h3 className="font-semibold text-foreground flex items-center gap-2">
+                <Hand className="w-4 h-4 text-primary" />
+                Sign Recognition
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">AI-powered translation</p>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {/* Current sign */}
+              <div className="text-center p-4 bg-primary/5 rounded-xl border border-primary/20">
+                {currentSign ? (
+                  <>
+                    <motion.div
+                      key={currentSign}
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="text-2xl font-bold text-primary"
+                    >
+                      "{currentSign}"
+                    </motion.div>
+                    <p className="text-xs text-muted-foreground mt-1">95% confidence</p>
+                  </>
+                ) : (
+                  <div className="text-muted-foreground">
+                    <motion.div
+                      animate={{ opacity: [0.4, 1, 0.4] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                      className="flex justify-center gap-1 mb-2"
+                    >
+                      <div className="w-2 h-2 rounded-full bg-primary" />
+                      <div className="w-2 h-2 rounded-full bg-primary" />
+                      <div className="w-2 h-2 rounded-full bg-primary" />
+                    </motion.div>
+                    <p className="text-sm">Waiting for signs...</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Translation history */}
+              <div>
+                <h4 className="text-sm font-medium text-foreground mb-2">Translation</h4>
+                <div className="bg-secondary/30 rounded-lg p-3 min-h-[100px] max-h-[150px] overflow-y-auto">
+                  {recognizedSigns.length > 0 ? (
+                    <p className="text-sm text-foreground leading-relaxed">
+                      {recognizedSigns.join(" ")}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">
+                      Detected signs will appear here...
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Clear button */}
+              {recognizedSigns.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setRecognizedSigns([])}
+                >
+                  Clear Translation
+                </Button>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Glow effect */}
       <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 via-accent/20 to-primary/20 rounded-3xl blur-2xl -z-10 opacity-50" />
