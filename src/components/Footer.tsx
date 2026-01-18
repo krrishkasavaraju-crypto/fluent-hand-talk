@@ -1,38 +1,24 @@
-import { Hand, Github, Twitter, Linkedin, Heart } from "lucide-react";
+import { Hand, Heart } from "lucide-react";
 
 const Footer = () => {
-  const links = {
-    product: [
-      { label: "Features", href: "#features" },
-      { label: "How It Works", href: "#how-it-works" },
-      { label: "Pricing", href: "#" },
-      { label: "Download", href: "#" },
-    ],
-    resources: [
-      { label: "Documentation", href: "#" },
-      { label: "API Reference", href: "#" },
-      { label: "Community", href: "#community" },
-      { label: "Blog", href: "#" },
-    ],
-    company: [
-      { label: "About Us", href: "#" },
-      { label: "Careers", href: "#" },
-      { label: "Contact", href: "#" },
-      { label: "Press", href: "#" },
-    ],
-    legal: [
-      { label: "Privacy", href: "#" },
-      { label: "Terms", href: "#" },
-      { label: "Accessibility", href: "#" },
-    ],
-  };
+  const companyLinks = [
+    { label: "About Us", href: "#about" },
+    { label: "Careers", href: "#" },
+    { label: "Contact", href: "#" },
+    { label: "Press", href: "#" },
+  ];
+
+  const teamMembers = [
+    { name: "Carlos Tello Dominguez", role: "Co-Founder & Developer" },
+    { name: "Krishna Kasavaraju", role: "Co-Founder & Developer" },
+  ];
 
   return (
     <footer className="bg-secondary/30 border-t border-border">
       <div className="container mx-auto px-4 py-16">
-        <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-8 mb-12">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
           {/* Brand column */}
-          <div className="lg:col-span-2">
+          <div>
             <a href="#" className="flex items-center gap-2 mb-4">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md">
                 <Hand className="w-5 h-5 text-primary-foreground" />
@@ -44,37 +30,37 @@ const Footer = () => {
             <p className="text-muted-foreground mb-6 max-w-sm">
               Breaking barriers between Deaf and hearing communities with AI-powered real-time translation.
             </p>
-            <div className="flex items-center gap-4">
-              {[Github, Twitter, Linkedin].map((Icon, i) => (
-                <a
-                  key={i}
-                  href="#"
-                  className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
-                >
-                  <Icon className="w-5 h-5" />
-                </a>
-              ))}
-            </div>
           </div>
 
-          {/* Links columns */}
-          {Object.entries(links).map(([title, items]) => (
-            <div key={title}>
-              <h4 className="font-semibold text-foreground mb-4 capitalize">{title}</h4>
-              <ul className="space-y-2">
-                {items.map((link) => (
-                  <li key={link.label}>
-                    <a
-                      href={link.href}
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {link.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {/* Company column */}
+          <div>
+            <h4 className="font-semibold text-foreground mb-4">Company</h4>
+            <ul className="space-y-2">
+              {companyLinks.map((link) => (
+                <li key={link.label}>
+                  <a
+                    href={link.href}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* About Us / Team column */}
+          <div id="about">
+            <h4 className="font-semibold text-foreground mb-4">Our Team</h4>
+            <ul className="space-y-3">
+              {teamMembers.map((member) => (
+                <li key={member.name} className="text-muted-foreground">
+                  <span className="block font-medium text-foreground">{member.name}</span>
+                  <span className="text-sm">{member.role}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         {/* Bottom bar */}

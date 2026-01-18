@@ -1,7 +1,47 @@
 import { motion } from "framer-motion";
 import { CheckCircle, ThumbsUp, HelpCircle } from "lucide-react";
+import { useState } from "react";
+
+interface Option {
+  label: string;
+  votes: number;
+}
 
 const CommunitySection = () => {
+  const [options, setOptions] = useState<Option[]>([
+    { label: "Appointment", votes: 12 },
+    { label: "Meeting", votes: 8 },
+    { label: "Class", votes: 3 },
+  ]);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [customInput, setCustomInput] = useState("");
+
+  const handleVote = (index: number) => {
+    setOptions(prev => prev.map((opt, i) => 
+      i === index ? { ...opt, votes: opt.votes + 1 } : opt
+    ));
+    setSelectedIndex(index);
+  };
+
+  const handleSubmit = () => {
+    if (customInput.trim()) {
+      // Check if option already exists
+      const existingIndex = options.findIndex(
+        opt => opt.label.toLowerCase() === customInput.trim().toLowerCase()
+      );
+      
+      if (existingIndex !== -1) {
+        // Vote for existing option
+        handleVote(existingIndex);
+      } else {
+        // Add new option with 1 vote
+        setOptions(prev => [...prev, { label: customInput.trim(), votes: 1 }]);
+        setSelectedIndex(options.length);
+      }
+      setCustomInput("");
+    }
+  };
+
   return (
     <section id="community" className="py-24 bg-gradient-to-b from-background to-primary/5">
       <div className="container mx-auto px-4">
@@ -57,23 +97,20 @@ const CommunitySection = () => {
 
               {/* Options */}
               <div className="space-y-2 mb-6">
-                {[
-                  { label: "Appointment", votes: 12 },
-                  { label: "Meeting", votes: 8 },
-                  { label: "Class", votes: 3 },
-                ].map((option, index) => (
+                {options.map((option, index) => (
                   <motion.button
                     key={option.label}
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}
+                    onClick={() => handleVote(index)}
                     className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${
-                      index === 0 
+                      selectedIndex === index 
                         ? "bg-primary/10 border-primary/30" 
                         : "bg-secondary/50 border-border hover:border-primary/20"
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      {index === 0 && <CheckCircle className="w-5 h-5 text-primary" />}
+                      {selectedIndex === index && <CheckCircle className="w-5 h-5 text-primary" />}
                       <span className="font-medium text-foreground">{option.label}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -88,10 +125,16 @@ const CommunitySection = () => {
               <div className="flex gap-2">
                 <input
                   type="text"
+                  value={customInput}
+                  onChange={(e) => setCustomInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                   placeholder="Enter other meaning..."
                   className="flex-1 px-4 py-3 rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
-                <button className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors">
+                <button 
+                  onClick={handleSubmit}
+                  className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+                >
                   Submit
                 </button>
               </div>
