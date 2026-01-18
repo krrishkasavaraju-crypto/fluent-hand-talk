@@ -1,9 +1,10 @@
 import { motion } from "framer-motion";
-import { Zap, Shield, HelpCircle } from "lucide-react";
+import { Zap, Shield, HelpCircle, Type } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const navItems = [
   { path: "/", label: "Translation & Features", icon: Zap },
+  { path: "/text-base", label: "Text Base", icon: Type },
   { path: "/safety", label: "Safety & Emergency", icon: Shield },
   { path: "/feedback", label: "Help Us Improve", icon: HelpCircle },
 ];
