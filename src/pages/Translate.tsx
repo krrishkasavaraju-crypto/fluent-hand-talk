@@ -1,5 +1,5 @@
-import { motion } from "framer-motion";
-import { useState, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { 
   Camera, 
   CameraOff, 
@@ -7,24 +7,12 @@ import {
   Mic, 
   Hand,
   Settings,
-  GraduationCap,
-  Building2,
-  Stethoscope,
-  Coffee,
   Send,
-  ArrowLeft
+  ArrowLeft,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-
-type ContextMode = "classroom" | "hospital" | "interview" | "casual";
-
-const contextModes: { id: ContextMode; label: string; icon: typeof GraduationCap }[] = [
-  { id: "classroom", label: "Classroom", icon: GraduationCap },
-  { id: "hospital", label: "Hospital", icon: Stethoscope },
-  { id: "interview", label: "Interview", icon: Building2 },
-  { id: "casual", label: "Casual", icon: Coffee },
-];
 
 interface Message {
   id: number;
@@ -35,16 +23,47 @@ interface Message {
 
 const Translate = () => {
   const [isCameraOn, setIsCameraOn] = useState(false);
-  const [selectedMode, setSelectedMode] = useState<ContextMode>("casual");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { id: 1, type: "speaker", text: "Hello! How can I help you today?", timestamp: "10:23 AM" },
     { id: 2, type: "signer", text: "I need help finding my classroom. I'm new here.", timestamp: "10:23 AM" },
   ]);
   const [inputText, setInputText] = useState("");
   const [recognizedSign, setRecognizedSign] = useState<string | null>(null);
+  const [recognizedSigns, setRecognizedSigns] = useState<string[]>([]);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  const simulatedSigns = [
+    "Hello", "Thank you", "Please", "Help", "Yes", "No", 
+    "Good", "Bad", "Friend", "Family", "Love", "Peace"
+  ];
+
+  const detectHandSigns = useCallback(() => {
+    if (!isCameraOn) return;
+
+    const randomSign = simulatedSigns[Math.floor(Math.random() * simulatedSigns.length)];
+    setRecognizedSign(randomSign);
+    setRecognizedSigns(prev => {
+      const updated = [...prev, randomSign];
+      return updated.slice(-10);
+    });
+  }, [isCameraOn]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isCameraOn && isAnalyzing) {
+      interval = setInterval(() => {
+        detectHandSigns();
+      }, 2500);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isCameraOn, isAnalyzing, detectHandSigns]);
 
   const startCamera = useCallback(async () => {
     try {
@@ -56,10 +75,9 @@ const Translate = () => {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
         setIsCameraOn(true);
-        // Simulate sign recognition after camera starts
-        setTimeout(() => {
-          setRecognizedSign("Hello");
-        }, 2000);
+        setIsAnalyzing(true);
+        setRecognizedSigns([]);
+        setRecognizedSign(null);
       }
     } catch (error) {
       console.error("Error accessing camera:", error);
@@ -75,6 +93,7 @@ const Translate = () => {
       videoRef.current.srcObject = null;
     }
     setIsCameraOn(false);
+    setIsAnalyzing(false);
     setRecognizedSign(null);
   }, []);
 
@@ -88,6 +107,20 @@ const Translate = () => {
     };
     setMessages([...messages, newMessage]);
     setInputText("");
+  };
+
+  const addSignToChat = () => {
+    if (recognizedSigns.length === 0) return;
+    const signText = recognizedSigns.join(" ");
+    const newMessage: Message = {
+      id: messages.length + 1,
+      type: "signer",
+      text: signText,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+    setMessages([...messages, newMessage]);
+    setRecognizedSigns([]);
+    setRecognizedSign(null);
   };
 
   return (
@@ -107,65 +140,7 @@ const Translate = () => {
       </header>
 
       <div className="container mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-[280px_1fr_320px] gap-6 min-h-[calc(100vh-120px)]">
-          {/* Left Sidebar - Options */}
-          <motion.aside
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="space-y-6"
-          >
-            {/* Context Mode */}
-            <div className="bg-card rounded-2xl border border-border p-4">
-              <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                <Settings className="w-4 h-4" />
-                Context Mode
-              </h3>
-              <div className="space-y-2">
-                {contextModes.map((mode) => {
-                  const Icon = mode.icon;
-                  return (
-                    <button
-                      key={mode.id}
-                      onClick={() => setSelectedMode(mode.id)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                        selectedMode === mode.id
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-secondary/50 hover:bg-secondary text-foreground"
-                      }`}
-                    >
-                      <Icon className="w-5 h-5" />
-                      <span className="font-medium">{mode.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="bg-card rounded-2xl border border-border p-4">
-              <h3 className="font-semibold text-foreground mb-4">Quick Phrases</h3>
-              <div className="space-y-2">
-                {["Thank you", "Please repeat", "I understand", "Help me"].map((phrase) => (
-                  <button
-                    key={phrase}
-                    onClick={() => {
-                      const newMessage: Message = {
-                        id: messages.length + 1,
-                        type: "signer",
-                        text: phrase,
-                        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                      };
-                      setMessages([...messages, newMessage]);
-                    }}
-                    className="w-full text-left px-4 py-2 rounded-lg bg-secondary/50 hover:bg-secondary text-sm text-foreground transition-colors"
-                  >
-                    {phrase}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </motion.aside>
-
+        <div className="grid lg:grid-cols-[1fr_320px] gap-6 min-h-[calc(100vh-120px)]">
           {/* Main Chat Area */}
           <motion.main
             initial={{ opacity: 0, y: 20 }}
@@ -264,6 +239,23 @@ const Translate = () => {
                     <span className="text-xs font-medium text-foreground/80 bg-background/50 px-2 py-1 rounded-full backdrop-blur-sm">LIVE</span>
                   </div>
                 )}
+
+
+                {/* Current detected sign overlay */}
+                <AnimatePresence>
+                  {recognizedSign && isCameraOn && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      className="absolute bottom-16 left-1/2 -translate-x-1/2"
+                    >
+                      <div className="bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg">
+                        <span className="font-bold">"{recognizedSign}"</span>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Camera Controls */}
@@ -296,48 +288,37 @@ const Translate = () => {
                   </h3>
                 </div>
                 <div className="p-4">
-                  {recognizedSign ? (
-                    <div className="text-center">
-                      <motion.div
-                        initial={{ scale: 0.8 }}
-                        animate={{ scale: 1 }}
-                        className="text-3xl font-bold text-primary mb-2"
-                      >
-                        "{recognizedSign}"
-                      </motion.div>
-                      <p className="text-sm text-muted-foreground">98% confidence</p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-3"
-                        onClick={() => {
-                          const newMessage: Message = {
-                            id: messages.length + 1,
-                            type: "signer",
-                            text: recognizedSign,
-                            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                          };
-                          setMessages([...messages, newMessage]);
-                          setRecognizedSign(null);
-                          setTimeout(() => setRecognizedSign("Thank you"), 1500);
-                        }}
-                      >
-                        Add to chat
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="text-center py-4">
-                      <motion.div
-                        animate={{ opacity: [0.4, 1, 0.4] }}
-                        transition={{ duration: 1.5, repeat: Infinity }}
-                        className="flex justify-center gap-1 mb-2"
-                      >
-                        <div className="w-2 h-2 rounded-full bg-primary" />
-                        <div className="w-2 h-2 rounded-full bg-primary" />
-                        <div className="w-2 h-2 rounded-full bg-primary" />
-                      </motion.div>
-                      <p className="text-sm text-muted-foreground">Analyzing signs...</p>
-                    </div>
+                  {/* Translation text */}
+                  <div className="bg-secondary/30 rounded-lg p-3 min-h-[80px] max-h-[120px] overflow-y-auto mb-3">
+                    {recognizedSigns.length > 0 ? (
+                      <p className="text-sm text-foreground leading-relaxed">
+                        {recognizedSigns.join(" ")}
+                      </p>
+                    ) : (
+                      <div className="text-center py-2">
+                        <motion.div
+                          animate={{ opacity: [0.4, 1, 0.4] }}
+                          transition={{ duration: 1.5, repeat: Infinity }}
+                          className="flex justify-center gap-1 mb-2"
+                        >
+                          <div className="w-2 h-2 rounded-full bg-primary" />
+                          <div className="w-2 h-2 rounded-full bg-primary" />
+                          <div className="w-2 h-2 rounded-full bg-primary" />
+                        </motion.div>
+                        <p className="text-sm text-muted-foreground">Analyzing signs...</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {recognizedSigns.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={addSignToChat}
+                    >
+                      Add to chat
+                    </Button>
                   )}
                 </div>
               </motion.div>

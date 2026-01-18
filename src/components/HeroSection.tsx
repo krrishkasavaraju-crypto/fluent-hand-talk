@@ -1,12 +1,12 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Play, ArrowRight, Video, Mic, MessageSquare } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import CameraPreview from "./CameraPreview";
 
 const HeroSection = () => {
   return (
-    <section className="relative min-h-screen pt-24 pb-16 overflow-hidden">
+    <section className="relative min-h-screen pt-40 pb-16 overflow-hidden">
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-background via-secondary/20 to-background pointer-events-none" />
       
@@ -15,7 +15,7 @@ const HeroSection = () => {
       <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse-slow" />
 
       <div className="container mx-auto px-4 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 items-center min-h-[calc(100vh-8rem)]">
+        <div className="grid lg:grid-cols-2 gap-12 items-center min-h-[calc(100vh-12rem)]">
           {/* Left Column - Content */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
@@ -54,10 +54,6 @@ const HeroSection = () => {
                   <ArrowRight className="w-5 h-5" />
                 </Button>
               </Link>
-              <Button variant="glass" size="xl">
-                <Play className="w-5 h-5" />
-                Watch Demo
-              </Button>
             </div>
           </motion.div>
 
@@ -66,52 +62,8 @@ const HeroSection = () => {
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="relative"
           >
             <CameraPreview />
-
-            {/* Floating feature cards */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.8 }}
-              className="absolute -left-4 top-20 glass-panel rounded-xl p-3 shadow-lg"
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Video className="w-4 h-4 text-primary" />
-                </div>
-                <span className="text-sm font-medium">ASL → Text</span>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.9 }}
-              className="absolute -right-4 top-40 glass-panel rounded-xl p-3 shadow-lg"
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
-                  <Mic className="w-4 h-4 text-accent" />
-                </div>
-                <span className="text-sm font-medium">Speech → Signs</span>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 1 }}
-              className="absolute -left-8 bottom-20 glass-panel rounded-xl p-3 shadow-lg"
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
-                  <MessageSquare className="w-4 h-4 text-success" />
-                </div>
-                <span className="text-sm font-medium">Context Aware</span>
-              </div>
-            </motion.div>
           </motion.div>
         </div>
       </div>
