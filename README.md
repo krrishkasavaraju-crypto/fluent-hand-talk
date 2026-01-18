@@ -1,24 +1,26 @@
-# Welcome to your Lovable project
+# ASL Bridge
 
-## Project info
+## Inspiration
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+Most digital systems — meetings, classrooms, interviews — are designed around spoken English and dense text. For Deaf and Hard of Hearing users, access often depends on interpreters or captions that preserve English structure, even though American Sign Language (ASL) is a distinct visual language with its own grammar and cognition.
 
-## How can I edit this code?
+We were inspired by the gap between *translation* and *comprehension*. Rather than asking ASL users to adapt to English-first systems, we asked: **what would it look like if systems adapted to ASL cognition instead?**
 
-There are several ways of editing your application.
+ASL Bridge was created to explore an ASL-first approach to live communication — one that prioritizes structure, context, and visual clarity over literal word-for-word translation.
 
-**Use Lovable**
+---
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## What it does
 
-Changes made via Lovable will be committed automatically to this repo.
+ASL Bridge is an **ASL-first live meeting companion** that restructures spoken conversations into **ASL-friendly visual explanations** in real time.
 
-**Use your preferred IDE**
+Instead of translating every sentence, the system:
+- Segments live meeting speech into meaningful ideas
+- Identifies intent (instruction, decision, question, action item)
+- Presents simplified text alongside **concept-based ASL explanation videos**
+- Maintains a visual timeline so users can track context and progression
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+The result is a **visual language layer** that supports ASL users during live meetings, without claiming to replace interpreters or perform literal ASL translation.
 
 Follow these steps:
 
@@ -103,14 +105,3 @@ VITE_ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
 3. Click "Process" to analyze the transcript
 4. The system will segment the content into meaningful ideas and display ASL-friendly explanations
 
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
