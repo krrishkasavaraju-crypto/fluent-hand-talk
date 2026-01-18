@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, CameraOff, Settings, Maximize2, Hand, X, Scan } from "lucide-react";
+import { Camera, CameraOff, Settings, Maximize2, Hand, X, Loader2 } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
@@ -32,7 +32,7 @@ import aslX from "@/assets/asl/x.png";
 import aslY from "@/assets/asl/y.png";
 import aslZ from "@/assets/asl/z.png";
 
-// ASL alphabet reference map
+// ASL alphabet reference map - only these letters can be recognized
 const aslAlphabet: Record<string, string> = {
   A: aslA, B: aslB, C: aslC, D: aslD, E: aslE, F: aslF,
   G: aslG, H: aslH, I: aslI, J: aslJ, K: aslK, L: aslL,
@@ -41,17 +41,14 @@ const aslAlphabet: Record<string, string> = {
   Y: aslY, Z: aslZ,
 };
 
-// Valid signs - only letters A-Z
-const validSigns = [
-  "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
-  "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
-  "U", "V", "W", "X", "Y", "Z"
-];
+// Valid signs - only letters A-Z from the ASL alphabet reference
+const validLetters = Object.keys(aslAlphabet);
 
 const CameraPreview = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(false);
-  const [isCapturing, setIsCapturing] = useState(false);
+  const [isDetecting, setIsDetecting] = useState(false);
+  const [handDetected, setHandDetected] = useState(false);
   const [recognizedSigns, setRecognizedSigns] = useState<string[]>([]);
   const [currentSign, setCurrentSign] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -61,34 +58,59 @@ const CameraPreview = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Manual capture - user presses button when hands are ready
-  const captureSign = useCallback(() => {
-    if (!isCameraOn || isCapturing) return;
-    
-    setIsCapturing(true);
-    setCurrentSign(null);
-    
-    // Simulate brief detection delay
-    setTimeout(() => {
-      // Simulate detection - 80% chance of valid letter, 20% chance of invalid
-      const isValidDetection = Math.random() > 0.2;
-      
-      if (isValidDetection) {
-        const randomSign = validSigns[Math.floor(Math.random() * validSigns.length)];
-        setCurrentSign(randomSign);
-        
-        // Add to recognized signs history
-        setRecognizedSigns(prev => {
-          const updated = [...prev, randomSign];
-          return updated.slice(-10); // Keep last 10 signs
-        });
-      } else {
-        // Invalid sign detected
-        setCurrentSign("INVALID");
-      }
-      setIsCapturing(false);
-    }, 800);
-  }, [isCameraOn, isCapturing]);
+  // Automatic detection - runs when camera is on
+  const detectHandSigns = useCallback(() => {
+    if (!isCameraOn) return;
+
+    // Simulate hand presence detection (in real app, this would use ML)
+    // 60% chance hand is detected in frame
+    const isHandInFrame = Math.random() > 0.4;
+    setHandDetected(isHandInFrame);
+
+    if (!isHandInFrame) {
+      // No hand detected - don't attempt recognition
+      setCurrentSign(null);
+      return;
+    }
+
+    setIsDetecting(true);
+
+    // Hand is detected - now try to match against A-Z letters
+    // 70% chance the sign matches a known letter, 30% chance it's unrecognized
+    const isRecognizedLetter = Math.random() > 0.3;
+
+    if (isRecognizedLetter) {
+      // Match found - pick a random letter from A-Z
+      const randomLetter = validLetters[Math.floor(Math.random() * validLetters.length)];
+      setCurrentSign(randomLetter);
+
+      // Add to recognized signs history
+      setRecognizedSigns(prev => {
+        const updated = [...prev, randomLetter];
+        return updated.slice(-20); // Keep last 20 signs
+      });
+    } else {
+      // Sign doesn't match any known A-Z letter
+      setCurrentSign("UNAVAILABLE");
+    }
+
+    setTimeout(() => setIsDetecting(false), 500);
+  }, [isCameraOn]);
+
+  // Run automatic detection every 2 seconds when camera is on
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    if (isCameraOn) {
+      interval = setInterval(() => {
+        detectHandSigns();
+      }, 2000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isCameraOn, detectHandSigns]);
 
   const startCamera = useCallback(async () => {
     try {
@@ -192,15 +214,32 @@ const CameraPreview = () => {
             )}
 
             {/* Recording indicator */}
-            <div className="absolute top-4 left-4 flex items-center gap-2">
-              <motion.div
-                animate={{ opacity: isRecording ? [1, 0.5, 1] : 1 }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-                className={`w-3 h-3 rounded-full ${isRecording ? 'bg-destructive' : 'bg-muted-foreground'}`}
-              />
-              <span className="text-sm font-medium text-foreground/80">
-                {isRecording ? 'LIVE' : 'OFF'}
-              </span>
+            <div className="absolute top-4 left-4 flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <motion.div
+                  animate={{ opacity: isRecording ? [1, 0.5, 1] : 1 }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                  className={`w-3 h-3 rounded-full ${isRecording ? 'bg-destructive' : 'bg-muted-foreground'}`}
+                />
+                <span className="text-sm font-medium text-foreground/80">
+                  {isRecording ? 'LIVE' : 'OFF'}
+                </span>
+              </div>
+              
+              {/* Hand detection status */}
+              {isCameraOn && (
+                <div className={`flex items-center gap-2 px-3 py-1 rounded-full backdrop-blur-sm ${
+                  handDetected 
+                    ? 'bg-green-500/20 text-green-400' 
+                    : 'bg-muted/50 text-muted-foreground'
+                }`}>
+                  <Hand className="w-3 h-3" />
+                  <span className="text-xs font-medium">
+                    {handDetected ? 'Hand detected' : 'No hand detected'}
+                  </span>
+                  {isDetecting && <Loader2 className="w-3 h-3 animate-spin" />}
+                </div>
+              )}
             </div>
 
 
@@ -222,28 +261,36 @@ const CameraPreview = () => {
 
             {/* Current detected sign overlay */}
             <AnimatePresence>
-              {currentSign && isCameraOn && (
+              {currentSign && isCameraOn && handDetected && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.8, y: 20 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.8, y: -20 }}
                   className="absolute bottom-20 left-1/2 -translate-x-1/2"
                 >
-                  {currentSign === "INVALID" ? (
-                    <div className="bg-destructive text-destructive-foreground px-6 py-3 rounded-xl shadow-lg">
+                  {currentSign === "UNAVAILABLE" ? (
+                    <div className="bg-amber-500/90 text-white px-6 py-3 rounded-xl shadow-lg">
                       <div className="flex items-center gap-2">
                         <X className="w-5 h-5" />
-                        <span className="text-lg font-bold">Hand sign not recognized</span>
+                        <span className="text-lg font-bold">Sign unavailable</span>
                       </div>
-                      <p className="text-xs text-destructive-foreground/80 text-center mt-1">Please try again</p>
+                      <p className="text-xs text-white/80 text-center mt-1">Try a letter A-Z</p>
                     </div>
                   ) : (
                     <div className="bg-primary text-primary-foreground px-6 py-3 rounded-xl shadow-lg">
-                      <div className="flex items-center gap-2">
-                        <Hand className="w-5 h-5" />
-                        <span className="text-lg font-bold">"{currentSign}"</span>
+                      <div className="flex items-center gap-3">
+                        {aslAlphabet[currentSign] && (
+                          <img 
+                            src={aslAlphabet[currentSign]} 
+                            alt={`ASL ${currentSign}`}
+                            className="w-10 h-10 object-contain bg-white/20 rounded-lg p-1"
+                          />
+                        )}
+                        <div>
+                          <span className="text-2xl font-bold">"{currentSign}"</span>
+                          <p className="text-xs text-primary-foreground/80">Letter detected</p>
+                        </div>
                       </div>
-                      <p className="text-xs text-primary-foreground/80 text-center mt-1">Sign detected</p>
                     </div>
                   )}
                 </motion.div>
@@ -261,24 +308,14 @@ const CameraPreview = () => {
                   Start Camera
                 </Button>
               ) : (
-                <>
-                  <Button
-                    onClick={captureSign}
-                    disabled={isCapturing}
-                    className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg"
-                  >
-                    <Scan className={`w-4 h-4 mr-2 ${isCapturing ? 'animate-pulse' : ''}`} />
-                    {isCapturing ? 'Detecting...' : 'Capture Sign'}
-                  </Button>
-                  <Button
-                    onClick={stopCamera}
-                    variant="destructive"
-                    className="shadow-lg"
-                  >
-                    <CameraOff className="w-4 h-4 mr-2" />
-                    Stop
-                  </Button>
-                </>
+                <Button
+                  onClick={stopCamera}
+                  variant="destructive"
+                  className="shadow-lg"
+                >
+                  <CameraOff className="w-4 h-4 mr-2" />
+                  Stop Camera
+                </Button>
               )}
             </div>
           </div>
@@ -305,11 +342,11 @@ const CameraPreview = () => {
               <div className="p-4 space-y-4">
                 {/* Current sign with ASL reference */}
                 <div className="text-center p-4 bg-primary/5 rounded-xl border border-primary/20">
-                  {currentSign && currentSign !== "INVALID" ? (
+                  {currentSign && currentSign !== "UNAVAILABLE" && handDetected ? (
                     <>
-                      {aslAlphabet[currentSign.toUpperCase()] && (
+                      {aslAlphabet[currentSign] && (
                         <img 
-                          src={aslAlphabet[currentSign.toUpperCase()]} 
+                          src={aslAlphabet[currentSign]} 
                           alt={`ASL sign for ${currentSign}`}
                           className="w-16 h-16 mx-auto mb-2 object-contain"
                         />
@@ -322,34 +359,46 @@ const CameraPreview = () => {
                       >
                         "{currentSign}"
                       </motion.div>
-                      <p className="text-xs text-muted-foreground mt-1">95% confidence</p>
+                      <p className="text-xs text-muted-foreground mt-1">Letter matched</p>
                     </>
-                  ) : currentSign === "INVALID" ? (
-                    <div className="text-destructive">
+                  ) : currentSign === "UNAVAILABLE" && handDetected ? (
+                    <div className="text-amber-500">
                       <X className="w-8 h-8 mx-auto mb-2" />
-                      <p className="text-sm font-medium">Sign not recognized</p>
-                      <p className="text-xs text-muted-foreground mt-1">Please try again</p>
+                      <p className="text-sm font-medium">Sign unavailable</p>
+                      <p className="text-xs text-muted-foreground mt-1">Only letters A-Z are supported</p>
+                    </div>
+                  ) : handDetected ? (
+                    <div className="text-muted-foreground">
+                      <motion.div
+                        animate={{ opacity: [0.4, 1, 0.4] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                        className="flex justify-center gap-1 mb-2"
+                      >
+                        <div className="w-2 h-2 rounded-full bg-primary" />
+                        <div className="w-2 h-2 rounded-full bg-primary" />
+                        <div className="w-2 h-2 rounded-full bg-primary" />
+                      </motion.div>
+                      <p className="text-sm">Analyzing sign...</p>
                     </div>
                   ) : (
                     <div className="text-muted-foreground">
                       <Hand className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">Hold up your hand sign</p>
-                      <p className="text-xs mt-1">Press "Capture Sign" when ready</p>
+                      <p className="text-sm">Show your hand to camera</p>
+                      <p className="text-xs mt-1">Detection is automatic</p>
                     </div>
                   )}
                 </div>
 
-                {/* Translation history */}
                 <div>
                   <h4 className="text-sm font-medium text-foreground mb-2">Translation</h4>
                   <div className="bg-secondary/30 rounded-lg p-3 min-h-[100px] max-h-[150px] overflow-y-auto">
                     {recognizedSigns.length > 0 ? (
-                      <p className="text-sm text-foreground leading-relaxed">
-                        {recognizedSigns.filter(s => s !== "INVALID").join(" ")}
+                      <p className="text-sm text-foreground leading-relaxed tracking-wider">
+                        {recognizedSigns.join("")}
                       </p>
                     ) : (
                       <p className="text-sm text-muted-foreground italic">
-                        Detected signs will appear here...
+                        Detected letters will appear here...
                       </p>
                     )}
                   </div>
