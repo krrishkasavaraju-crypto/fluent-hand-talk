@@ -33,15 +33,8 @@ const Header = () => {
               </motion.div>
             </Link>
 
-            {/* CTA Buttons */}
-            <div className="hidden md:flex items-center gap-3">
-              <Button variant="ghost" size="sm">
-                Sign In
-              </Button>
-              <Button variant="hero" size="sm">
-                Get Started Free
-              </Button>
-            </div>
+            {/* Spacer for layout balance */}
+            <div className="hidden md:flex items-center gap-3" />
 
             {/* Mobile Menu Button */}
             <button
@@ -64,14 +57,7 @@ const Header = () => {
               exit={{ opacity: 0, height: 0 }}
               className="md:hidden pb-4"
             >
-              <div className="flex flex-col gap-2 px-4">
-                <Button variant="ghost" className="w-full">
-                  Sign In
-                </Button>
-                <Button variant="hero" className="w-full">
-                  Get Started Free
-                </Button>
-              </div>
+              <div className="flex flex-col gap-2 px-4" />
             </motion.div>
           )}
         </div>
