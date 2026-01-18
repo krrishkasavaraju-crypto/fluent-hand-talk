@@ -59,6 +59,49 @@ This project is built with:
 - React
 - shadcn-ui
 - Tailwind CSS
+- Google Gemini API (for meeting transcript processing)
+- ElevenLabs API (optional, for text-to-speech)
+
+## ASL Meeting Companion Setup
+
+This project includes an ASL-first live meeting companion that converts spoken meetings into ASL-friendly visual explanations.
+
+### Environment Variables
+
+Create a `.env` file in the root directory with the following variables:
+
+```env
+# Required: Google Gemini API Key
+# Get your API key from: https://makersuite.google.com/app/apikey
+VITE_GEMINI_API_KEY=your_gemini_api_key_here
+
+# Optional: ElevenLabs API Key
+# Get your API key from: https://elevenlabs.io/
+# Used for text-to-speech when Deaf users send messages to hearing participants
+VITE_ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
+```
+
+### Features
+
+- **Two-panel layout**: Simplified text explanations (left) and ASL video placeholders (right)
+- **Timeline visualization**: Shows topic progression at the bottom
+- **Intent classification**: Automatically categorizes content (instruction, decision, question, discussion, action item)
+- **ASL intent buttons**: Quick actions for "Repeat", "Slow down", and "Clarify"
+- **Optional ElevenLabs integration**: Allows Deaf users to voice messages to hearing participants
+
+### Important Notes
+
+- This is a **prototype** and NOT an interpreter replacement
+- ASL videos shown are **conceptual explanations**, not word-for-word translations
+- The system does **NOT** implement sign language recognition
+- This is designed as a **visual language layer** for meetings, not a translation engine
+
+### Usage
+
+1. Navigate to `/meeting` or click "Meeting Companion" in the header
+2. Paste a meeting transcript or enter live captions
+3. Click "Process" to analyze the transcript
+4. The system will segment the content into meaningful ideas and display ASL-friendly explanations
 
 ## How can I deploy this project?
 

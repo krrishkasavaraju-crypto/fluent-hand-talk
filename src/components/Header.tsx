@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Hand, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -51,6 +52,11 @@ const Header = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
+            <Link to="/meeting">
+              <Button variant="outline" size="sm">
+                Meeting Companion
+              </Button>
+            </Link>
             <Button variant="ghost" size="sm">
               Sign In
             </Button>
@@ -91,6 +97,11 @@ const Header = () => {
                 </a>
               ))}
               <div className="flex flex-col gap-2 mt-4 px-4">
+                <Link to="/meeting" className="w-full">
+                  <Button variant="outline" className="w-full">
+                    Meeting Companion
+                  </Button>
+                </Link>
                 <Button variant="ghost" className="w-full">
                   Sign In
                 </Button>
