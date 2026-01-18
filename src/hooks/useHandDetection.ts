@@ -1,250 +1,238 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as handpose from '@tensorflow-models/handpose';
 import '@tensorflow/tfjs';
-import * as fp from 'fingerpose';
 
-// Define all 26 ASL letter gestures using fingerpose based on standard ASL alphabet
-const createASLGestures = () => {
-  const gestures: fp.GestureDescription[] = [];
+// Landmark indices for hand
+const LANDMARK = {
+  WRIST: 0,
+  THUMB_CMC: 1, THUMB_MCP: 2, THUMB_IP: 3, THUMB_TIP: 4,
+  INDEX_MCP: 5, INDEX_PIP: 6, INDEX_DIP: 7, INDEX_TIP: 8,
+  MIDDLE_MCP: 9, MIDDLE_PIP: 10, MIDDLE_DIP: 11, MIDDLE_TIP: 12,
+  RING_MCP: 13, RING_PIP: 14, RING_DIP: 15, RING_TIP: 16,
+  PINKY_MCP: 17, PINKY_PIP: 18, PINKY_DIP: 19, PINKY_TIP: 20
+};
 
-  // A - Fist with thumb on side (thumb alongside, not over fingers)
-  const aGesture = new fp.GestureDescription('A');
-  aGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.NoCurl, 1.0);
-  aGesture.addCurl(fp.Finger.Index, fp.FingerCurl.FullCurl, 1.0);
-  aGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.FullCurl, 1.0);
-  aGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 1.0);
-  aGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.FullCurl, 1.0);
-  aGesture.addDirection(fp.Finger.Thumb, fp.FingerDirection.VerticalUp, 0.8);
-  gestures.push(aGesture);
+// Helper functions for geometric analysis
+const distance = (p1: number[], p2: number[]): number => {
+  return Math.sqrt(
+    Math.pow(p1[0] - p2[0], 2) + 
+    Math.pow(p1[1] - p2[1], 2) + 
+    Math.pow(p1[2] - p2[2], 2)
+  );
+};
 
-  // B - Flat hand, fingers together pointing up, thumb tucked across palm
-  const bGesture = new fp.GestureDescription('B');
-  bGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.HalfCurl, 1.0);
-  bGesture.addCurl(fp.Finger.Index, fp.FingerCurl.NoCurl, 1.0);
-  bGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.NoCurl, 1.0);
-  bGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.NoCurl, 1.0);
-  bGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.NoCurl, 1.0);
-  bGesture.addDirection(fp.Finger.Index, fp.FingerDirection.VerticalUp, 0.8);
-  gestures.push(bGesture);
+const isFingerExtended = (landmarks: number[][], mcp: number, pip: number, dip: number, tip: number): boolean => {
+  const mcpToPip = distance(landmarks[mcp], landmarks[pip]);
+  const pipToTip = distance(landmarks[pip], landmarks[tip]);
+  const mcpToTip = distance(landmarks[mcp], landmarks[tip]);
+  
+  // Finger is extended if tip is far from MCP relative to the finger length
+  return mcpToTip > (mcpToPip + pipToTip) * 0.7;
+};
 
-  // C - Curved hand like holding a cup, all fingers curved together
-  const cGesture = new fp.GestureDescription('C');
-  cGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.NoCurl, 0.8);
-  cGesture.addCurl(fp.Finger.Index, fp.FingerCurl.HalfCurl, 1.0);
-  cGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.HalfCurl, 1.0);
-  cGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.HalfCurl, 1.0);
-  cGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.HalfCurl, 1.0);
-  gestures.push(cGesture);
+const isFingerCurled = (landmarks: number[][], mcp: number, pip: number, dip: number, tip: number): boolean => {
+  const mcpToTip = distance(landmarks[mcp], landmarks[tip]);
+  const mcpToPip = distance(landmarks[mcp], landmarks[pip]);
+  
+  // Finger is curled if tip is close to MCP
+  return mcpToTip < mcpToPip * 1.5;
+};
 
-  // D - Index up, others curled touching thumb forming circle
-  const dGesture = new fp.GestureDescription('D');
-  dGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.HalfCurl, 1.0);
-  dGesture.addCurl(fp.Finger.Index, fp.FingerCurl.NoCurl, 1.0);
-  dGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.FullCurl, 1.0);
-  dGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 1.0);
-  dGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.FullCurl, 1.0);
-  dGesture.addDirection(fp.Finger.Index, fp.FingerDirection.VerticalUp, 0.8);
-  gestures.push(dGesture);
+const isThumbExtended = (landmarks: number[][]): boolean => {
+  const thumbTip = landmarks[LANDMARK.THUMB_TIP];
+  const thumbMcp = landmarks[LANDMARK.THUMB_MCP];
+  const indexMcp = landmarks[LANDMARK.INDEX_MCP];
+  
+  const thumbLength = distance(thumbMcp, thumbTip);
+  const thumbToIndex = distance(thumbTip, indexMcp);
+  
+  return thumbToIndex > thumbLength * 0.8;
+};
 
-  // E - All fingertips touching thumb, bent down
-  const eGesture = new fp.GestureDescription('E');
-  eGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.HalfCurl, 1.0);
-  eGesture.addCurl(fp.Finger.Index, fp.FingerCurl.FullCurl, 1.0);
-  eGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.FullCurl, 1.0);
-  eGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 1.0);
-  eGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.FullCurl, 1.0);
-  gestures.push(eGesture);
+const getFingerStates = (landmarks: number[][]): {
+  thumb: boolean;
+  index: boolean;
+  middle: boolean;
+  ring: boolean;
+  pinky: boolean;
+} => {
+  return {
+    thumb: isThumbExtended(landmarks),
+    index: isFingerExtended(landmarks, LANDMARK.INDEX_MCP, LANDMARK.INDEX_PIP, LANDMARK.INDEX_DIP, LANDMARK.INDEX_TIP),
+    middle: isFingerExtended(landmarks, LANDMARK.MIDDLE_MCP, LANDMARK.MIDDLE_PIP, LANDMARK.MIDDLE_DIP, LANDMARK.MIDDLE_TIP),
+    ring: isFingerExtended(landmarks, LANDMARK.RING_MCP, LANDMARK.RING_PIP, LANDMARK.RING_DIP, LANDMARK.RING_TIP),
+    pinky: isFingerExtended(landmarks, LANDMARK.PINKY_MCP, LANDMARK.PINKY_PIP, LANDMARK.PINKY_DIP, LANDMARK.PINKY_TIP)
+  };
+};
 
-  // F - Three fingers up (middle, ring, pinky), index and thumb touching in circle
-  const fGesture = new fp.GestureDescription('F');
-  fGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.HalfCurl, 1.0);
-  fGesture.addCurl(fp.Finger.Index, fp.FingerCurl.HalfCurl, 1.0);
-  fGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.NoCurl, 1.0);
-  fGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.NoCurl, 1.0);
-  fGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.NoCurl, 1.0);
-  gestures.push(fGesture);
+const isIndexPointingUp = (landmarks: number[][]): boolean => {
+  const indexTip = landmarks[LANDMARK.INDEX_TIP];
+  const indexMcp = landmarks[LANDMARK.INDEX_MCP];
+  return indexTip[1] < indexMcp[1]; // Y decreases going up
+};
 
-  // G - Index and thumb pointing sideways, parallel to ground
-  const gGesture = new fp.GestureDescription('G');
-  gGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.NoCurl, 1.0);
-  gGesture.addCurl(fp.Finger.Index, fp.FingerCurl.NoCurl, 1.0);
-  gGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.FullCurl, 1.0);
-  gGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 1.0);
-  gGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.FullCurl, 1.0);
-  gGesture.addDirection(fp.Finger.Index, fp.FingerDirection.HorizontalLeft, 0.8);
-  gGesture.addDirection(fp.Finger.Index, fp.FingerDirection.HorizontalRight, 0.8);
-  gestures.push(gGesture);
+const isIndexPointingSideways = (landmarks: number[][]): boolean => {
+  const indexTip = landmarks[LANDMARK.INDEX_TIP];
+  const indexMcp = landmarks[LANDMARK.INDEX_MCP];
+  const dx = Math.abs(indexTip[0] - indexMcp[0]);
+  const dy = Math.abs(indexTip[1] - indexMcp[1]);
+  return dx > dy * 1.5;
+};
 
-  // H - Index and middle fingers pointing sideways, parallel
-  const hGesture = new fp.GestureDescription('H');
-  hGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.HalfCurl, 1.0);
-  hGesture.addCurl(fp.Finger.Index, fp.FingerCurl.NoCurl, 1.0);
-  hGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.NoCurl, 1.0);
-  hGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 1.0);
-  hGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.FullCurl, 1.0);
-  hGesture.addDirection(fp.Finger.Index, fp.FingerDirection.HorizontalLeft, 0.8);
-  hGesture.addDirection(fp.Finger.Index, fp.FingerDirection.HorizontalRight, 0.8);
-  gestures.push(hGesture);
+const areFingersTouching = (landmarks: number[][], tip1: number, tip2: number): boolean => {
+  return distance(landmarks[tip1], landmarks[tip2]) < 40;
+};
 
-  // I - Pinky up, all others curled
-  const iGesture = new fp.GestureDescription('I');
-  iGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.HalfCurl, 1.0);
-  iGesture.addCurl(fp.Finger.Index, fp.FingerCurl.FullCurl, 1.0);
-  iGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.FullCurl, 1.0);
-  iGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 1.0);
-  iGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.NoCurl, 1.0);
-  iGesture.addDirection(fp.Finger.Pinky, fp.FingerDirection.VerticalUp, 0.8);
-  gestures.push(iGesture);
-
-  // K - Index up, middle finger angled forward, thumb between them
-  const kGesture = new fp.GestureDescription('K');
-  kGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.NoCurl, 1.0);
-  kGesture.addCurl(fp.Finger.Index, fp.FingerCurl.NoCurl, 1.0);
-  kGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.NoCurl, 0.8);
-  kGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 1.0);
-  kGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.FullCurl, 1.0);
-  kGesture.addDirection(fp.Finger.Index, fp.FingerDirection.VerticalUp, 0.8);
-  gestures.push(kGesture);
-
-  // L - L shape with thumb and index at 90 degrees
-  const lGesture = new fp.GestureDescription('L');
-  lGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.NoCurl, 1.0);
-  lGesture.addCurl(fp.Finger.Index, fp.FingerCurl.NoCurl, 1.0);
-  lGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.FullCurl, 1.0);
-  lGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 1.0);
-  lGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.FullCurl, 1.0);
-  lGesture.addDirection(fp.Finger.Thumb, fp.FingerDirection.HorizontalLeft, 0.8);
-  lGesture.addDirection(fp.Finger.Thumb, fp.FingerDirection.HorizontalRight, 0.8);
-  lGesture.addDirection(fp.Finger.Index, fp.FingerDirection.VerticalUp, 0.8);
-  gestures.push(lGesture);
-
-  // M - Three fingers over thumb (fist with thumb under index, middle, ring)
-  const mGesture = new fp.GestureDescription('M');
-  mGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.FullCurl, 1.0);
-  mGesture.addCurl(fp.Finger.Index, fp.FingerCurl.FullCurl, 1.0);
-  mGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.FullCurl, 1.0);
-  mGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 1.0);
-  mGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.FullCurl, 1.0);
-  gestures.push(mGesture);
-
-  // N - Two fingers over thumb (fist with thumb under index and middle)
-  const nGesture = new fp.GestureDescription('N');
-  nGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.FullCurl, 1.0);
-  nGesture.addCurl(fp.Finger.Index, fp.FingerCurl.FullCurl, 1.0);
-  nGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.FullCurl, 1.0);
-  nGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 1.0);
-  nGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.FullCurl, 1.0);
-  gestures.push(nGesture);
-
-  // O - All fingers curved to touch thumb forming a circle
-  const oGesture = new fp.GestureDescription('O');
-  oGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.HalfCurl, 1.0);
-  oGesture.addCurl(fp.Finger.Index, fp.FingerCurl.HalfCurl, 1.0);
-  oGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.HalfCurl, 1.0);
-  oGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.HalfCurl, 1.0);
-  oGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.HalfCurl, 1.0);
-  gestures.push(oGesture);
-
-  // P - K handshape but pointing down
-  const pGesture = new fp.GestureDescription('P');
-  pGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.NoCurl, 1.0);
-  pGesture.addCurl(fp.Finger.Index, fp.FingerCurl.NoCurl, 1.0);
-  pGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.NoCurl, 0.8);
-  pGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 1.0);
-  pGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.FullCurl, 1.0);
-  pGesture.addDirection(fp.Finger.Index, fp.FingerDirection.DiagonalDownLeft, 0.8);
-  pGesture.addDirection(fp.Finger.Index, fp.FingerDirection.DiagonalDownRight, 0.8);
-  gestures.push(pGesture);
-
-  // Q - G handshape but pointing down
-  const qGesture = new fp.GestureDescription('Q');
-  qGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.NoCurl, 1.0);
-  qGesture.addCurl(fp.Finger.Index, fp.FingerCurl.NoCurl, 1.0);
-  qGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.FullCurl, 1.0);
-  qGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 1.0);
-  qGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.FullCurl, 1.0);
-  qGesture.addDirection(fp.Finger.Index, fp.FingerDirection.DiagonalDownLeft, 0.8);
-  qGesture.addDirection(fp.Finger.Index, fp.FingerDirection.DiagonalDownRight, 0.8);
-  gestures.push(qGesture);
-
-  // R - Crossed index and middle fingers
-  const rGesture = new fp.GestureDescription('R');
-  rGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.HalfCurl, 1.0);
-  rGesture.addCurl(fp.Finger.Index, fp.FingerCurl.NoCurl, 1.0);
-  rGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.NoCurl, 1.0);
-  rGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 1.0);
-  rGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.FullCurl, 1.0);
-  rGesture.addDirection(fp.Finger.Index, fp.FingerDirection.VerticalUp, 0.8);
-  gestures.push(rGesture);
-
+// ASL Letter recognition based on landmark geometry
+const recognizeASLLetter = (landmarks: number[][]): { letter: string; confidence: number } | null => {
+  const fingers = getFingerStates(landmarks);
+  const extendedCount = [fingers.index, fingers.middle, fingers.ring, fingers.pinky].filter(Boolean).length;
+  
+  // Calculate some additional metrics
+  const thumbTip = landmarks[LANDMARK.THUMB_TIP];
+  const indexTip = landmarks[LANDMARK.INDEX_TIP];
+  const middleTip = landmarks[LANDMARK.MIDDLE_TIP];
+  const ringTip = landmarks[LANDMARK.RING_TIP];
+  const pinkyTip = landmarks[LANDMARK.PINKY_TIP];
+  const wrist = landmarks[LANDMARK.WRIST];
+  
+  const thumbIndexDist = distance(thumbTip, indexTip);
+  const indexMiddleDist = distance(indexTip, middleTip);
+  
+  // Y - Thumb and pinky extended, others curled (very distinctive - shaka sign)
+  if (fingers.thumb && fingers.pinky && !fingers.index && !fingers.middle && !fingers.ring) {
+    return { letter: 'Y', confidence: 9.5 };
+  }
+  
+  // I - Only pinky extended
+  if (fingers.pinky && !fingers.index && !fingers.middle && !fingers.ring && !fingers.thumb) {
+    return { letter: 'I', confidence: 9.0 };
+  }
+  
+  // L - Thumb and index extended at 90 degrees, others curled
+  if (fingers.thumb && fingers.index && !fingers.middle && !fingers.ring && !fingers.pinky) {
+    if (isIndexPointingUp(landmarks)) {
+      return { letter: 'L', confidence: 9.0 };
+    }
+    // G - Index and thumb pointing sideways
+    if (isIndexPointingSideways(landmarks)) {
+      return { letter: 'G', confidence: 8.5 };
+    }
+  }
+  
+  // D - Only index extended pointing up, thumb touching middle
+  if (fingers.index && !fingers.middle && !fingers.ring && !fingers.pinky && isIndexPointingUp(landmarks)) {
+    return { letter: 'D', confidence: 8.5 };
+  }
+  
+  // W - Index, middle, ring extended, pinky curled
+  if (fingers.index && fingers.middle && fingers.ring && !fingers.pinky) {
+    return { letter: 'W', confidence: 9.0 };
+  }
+  
+  // F - Middle, ring, pinky extended; index and thumb touching
+  if (!fingers.index && fingers.middle && fingers.ring && fingers.pinky) {
+    if (thumbIndexDist < 50) {
+      return { letter: 'F', confidence: 8.5 };
+    }
+  }
+  
+  // V - Index and middle extended and spread, ring and pinky curled
+  if (fingers.index && fingers.middle && !fingers.ring && !fingers.pinky) {
+    if (indexMiddleDist > 40) { // Spread apart
+      return { letter: 'V', confidence: 9.0 };
+    }
+    // U - Index and middle extended together
+    if (indexMiddleDist < 40) {
+      // Check if pointing sideways for H
+      if (isIndexPointingSideways(landmarks)) {
+        return { letter: 'H', confidence: 8.0 };
+      }
+      return { letter: 'U', confidence: 8.5 };
+    }
+  }
+  
+  // R - Index and middle extended and crossed
+  if (fingers.index && fingers.middle && !fingers.ring && !fingers.pinky) {
+    // R has fingers crossed - middle tip is closer to index MCP
+    const middleToIndexMcp = distance(middleTip, landmarks[LANDMARK.INDEX_MCP]);
+    const indexToMiddleMcp = distance(indexTip, landmarks[LANDMARK.MIDDLE_MCP]);
+    if (middleToIndexMcp < indexToMiddleMcp) {
+      return { letter: 'R', confidence: 8.0 };
+    }
+  }
+  
+  // B - All four fingers extended, thumb tucked
+  if (fingers.index && fingers.middle && fingers.ring && fingers.pinky && !fingers.thumb) {
+    return { letter: 'B', confidence: 9.0 };
+  }
+  
+  // Five/Open hand - All fingers extended (not an ASL letter but useful reference)
+  if (fingers.thumb && fingers.index && fingers.middle && fingers.ring && fingers.pinky) {
+    // Could be "5" or open hand, but check for specific letters
+    // K - Index and middle up with thumb between (like a modified V)
+    const thumbToIndex = distance(thumbTip, landmarks[LANDMARK.INDEX_MCP]);
+    const thumbToMiddle = distance(thumbTip, landmarks[LANDMARK.MIDDLE_MCP]);
+    if (thumbToIndex < 50 && thumbToMiddle < 50) {
+      return { letter: 'K', confidence: 7.5 };
+    }
+  }
+  
+  // C - All fingers curved (half-curled) forming a C shape
+  const indexCurved = !fingers.index && !isFingerCurled(landmarks, LANDMARK.INDEX_MCP, LANDMARK.INDEX_PIP, LANDMARK.INDEX_DIP, LANDMARK.INDEX_TIP);
+  const middleCurved = !fingers.middle && !isFingerCurled(landmarks, LANDMARK.MIDDLE_MCP, LANDMARK.MIDDLE_PIP, LANDMARK.MIDDLE_DIP, LANDMARK.MIDDLE_TIP);
+  if (indexCurved && middleCurved && extendedCount === 0) {
+    // Check if thumb is opposite to fingers (C shape)
+    const thumbToFingers = distance(thumbTip, indexTip);
+    if (thumbToFingers > 60 && thumbToFingers < 150) {
+      return { letter: 'C', confidence: 7.5 };
+    }
+  }
+  
+  // O - All fingers curved touching thumb to form circle
+  if (extendedCount === 0) {
+    const thumbToIndex = distance(thumbTip, indexTip);
+    const thumbToMiddle = distance(thumbTip, middleTip);
+    if (thumbToIndex < 50 && thumbToMiddle < 60) {
+      return { letter: 'O', confidence: 8.0 };
+    }
+  }
+  
+  // X - Index finger bent/hooked, others curled
+  if (!fingers.index && !fingers.middle && !fingers.ring && !fingers.pinky) {
+    const indexPip = landmarks[LANDMARK.INDEX_PIP];
+    const indexTipToWrist = distance(indexTip, wrist);
+    const indexPipToWrist = distance(indexPip, wrist);
+    // X has index hooked - tip is closer to wrist than PIP
+    if (indexTipToWrist < indexPipToWrist) {
+      return { letter: 'X', confidence: 7.5 };
+    }
+  }
+  
+  // A - Fist with thumb to the side (thumb alongside, not over)
+  if (!fingers.index && !fingers.middle && !fingers.ring && !fingers.pinky) {
+    const thumbToWrist = distance(thumbTip, wrist);
+    const indexMcpToWrist = distance(landmarks[LANDMARK.INDEX_MCP], wrist);
+    if (thumbToWrist > indexMcpToWrist * 0.8) {
+      return { letter: 'A', confidence: 7.0 };
+    }
+  }
+  
   // S - Fist with thumb over fingers
-  const sGesture = new fp.GestureDescription('S');
-  sGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.HalfCurl, 1.0);
-  sGesture.addCurl(fp.Finger.Index, fp.FingerCurl.FullCurl, 1.0);
-  sGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.FullCurl, 1.0);
-  sGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 1.0);
-  sGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.FullCurl, 1.0);
-  gestures.push(sGesture);
-
-  // T - Fist with thumb between index and middle
-  const tGesture = new fp.GestureDescription('T');
-  tGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.HalfCurl, 1.0);
-  tGesture.addCurl(fp.Finger.Index, fp.FingerCurl.FullCurl, 1.0);
-  tGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.FullCurl, 1.0);
-  tGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 1.0);
-  tGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.FullCurl, 1.0);
-  gestures.push(tGesture);
-
-  // U - Index and middle fingers up together (touching)
-  const uGesture = new fp.GestureDescription('U');
-  uGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.HalfCurl, 1.0);
-  uGesture.addCurl(fp.Finger.Index, fp.FingerCurl.NoCurl, 1.0);
-  uGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.NoCurl, 1.0);
-  uGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 1.0);
-  uGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.FullCurl, 1.0);
-  uGesture.addDirection(fp.Finger.Index, fp.FingerDirection.VerticalUp, 0.8);
-  gestures.push(uGesture);
-
-  // V - Index and middle fingers up and spread (peace sign)
-  const vGesture = new fp.GestureDescription('V');
-  vGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.HalfCurl, 1.0);
-  vGesture.addCurl(fp.Finger.Index, fp.FingerCurl.NoCurl, 1.0);
-  vGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.NoCurl, 1.0);
-  vGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 1.0);
-  vGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.FullCurl, 1.0);
-  vGesture.addDirection(fp.Finger.Index, fp.FingerDirection.DiagonalUpLeft, 0.6);
-  vGesture.addDirection(fp.Finger.Index, fp.FingerDirection.DiagonalUpRight, 0.6);
-  gestures.push(vGesture);
-
-  // W - Index, middle, and ring fingers up and spread
-  const wGesture = new fp.GestureDescription('W');
-  wGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.HalfCurl, 1.0);
-  wGesture.addCurl(fp.Finger.Index, fp.FingerCurl.NoCurl, 1.0);
-  wGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.NoCurl, 1.0);
-  wGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.NoCurl, 1.0);
-  wGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.FullCurl, 1.0);
-  wGesture.addDirection(fp.Finger.Index, fp.FingerDirection.VerticalUp, 0.8);
-  gestures.push(wGesture);
-
-  // X - Index finger hooked/bent, others curled
-  const xGesture = new fp.GestureDescription('X');
-  xGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.HalfCurl, 1.0);
-  xGesture.addCurl(fp.Finger.Index, fp.FingerCurl.HalfCurl, 1.0);
-  xGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.FullCurl, 1.0);
-  xGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 1.0);
-  xGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.FullCurl, 1.0);
-  gestures.push(xGesture);
-
-  // Y - Thumb and pinky out, others curled (shaka/hang loose)
-  const yGesture = new fp.GestureDescription('Y');
-  yGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.NoCurl, 1.0);
-  yGesture.addCurl(fp.Finger.Index, fp.FingerCurl.FullCurl, 1.0);
-  yGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.FullCurl, 1.0);
-  yGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 1.0);
-  yGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.NoCurl, 1.0);
-  gestures.push(yGesture);
-
-  return gestures;
+  if (!fingers.index && !fingers.middle && !fingers.ring && !fingers.pinky && !fingers.thumb) {
+    return { letter: 'S', confidence: 7.0 };
+  }
+  
+  // E - All fingers curled with fingertips touching palm/thumb
+  if (extendedCount === 0) {
+    const indexToThumb = distance(indexTip, thumbTip);
+    const middleToThumb = distance(middleTip, thumbTip);
+    if (indexToThumb < 60 && middleToThumb < 60) {
+      return { letter: 'E', confidence: 7.0 };
+    }
+  }
+  
+  return null;
 };
 
 interface UseHandDetectionProps {
@@ -275,9 +263,9 @@ export const useHandDetection = ({
   const [landmarks, setLandmarks] = useState<number[][] | null>(null);
 
   const modelRef = useRef<handpose.HandPose | null>(null);
-  const gestureEstimatorRef = useRef<fp.GestureEstimator | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastDetectionRef = useRef<number>(0);
+  const gestureHistoryRef = useRef<string[]>([]);
 
   // Load the model
   useEffect(() => {
@@ -289,11 +277,6 @@ export const useHandDetection = ({
         console.log('Loading HandPose model...');
         const model = await handpose.load();
         modelRef.current = model;
-        
-        // Create gesture estimator with ASL gestures
-        const aslGestures = createASLGestures();
-        gestureEstimatorRef.current = new fp.GestureEstimator(aslGestures);
-        
         setIsModelLoaded(true);
         console.log('HandPose model loaded successfully!');
       } catch (error) {
@@ -321,8 +304,8 @@ export const useHandDetection = ({
     }
 
     const now = Date.now();
-    // Throttle detection to ~10 FPS for performance
-    if (now - lastDetectionRef.current < 100) {
+    // Throttle detection to ~8 FPS for stability
+    if (now - lastDetectionRef.current < 125) {
       animationFrameRef.current = requestAnimationFrame(detect);
       return;
     }
@@ -374,31 +357,42 @@ export const useHandDetection = ({
           }
         }
 
-        // Estimate gesture
-        if (gestureEstimatorRef.current) {
-          const estimatedGestures = gestureEstimatorRef.current.estimate(
-            hand.landmarks,
-            7.5 // Minimum confidence score
-          );
-
-          if (estimatedGestures.gestures.length > 0) {
-            // Get the gesture with highest confidence
-            const bestGesture = estimatedGestures.gestures.reduce(
-              (prev: fp.GestureEstimate, curr: fp.GestureEstimate) => 
-                (curr.score > prev.score ? curr : prev)
-            );
-            setCurrentGesture(bestGesture.name);
-            setConfidence(bestGesture.score);
+        // Recognize ASL letter using geometric analysis
+        const result = recognizeASLLetter(hand.landmarks);
+        
+        if (result) {
+          // Add to gesture history for stability
+          gestureHistoryRef.current.push(result.letter);
+          if (gestureHistoryRef.current.length > 5) {
+            gestureHistoryRef.current.shift();
+          }
+          
+          // Only show gesture if it appears at least 3 times in last 5 detections
+          const counts: Record<string, number> = {};
+          for (const g of gestureHistoryRef.current) {
+            counts[g] = (counts[g] || 0) + 1;
+          }
+          
+          const stableLetter = Object.entries(counts).find(([_, count]) => count >= 3);
+          
+          if (stableLetter) {
+            setCurrentGesture(stableLetter[0]);
+            setConfidence(result.confidence);
           } else {
             setCurrentGesture(null);
             setConfidence(0);
           }
+        } else {
+          gestureHistoryRef.current = [];
+          setCurrentGesture(null);
+          setConfidence(0);
         }
       } else {
         setHandDetected(false);
         setCurrentGesture(null);
         setConfidence(0);
         setLandmarks(null);
+        gestureHistoryRef.current = [];
 
         // Clear canvas
         if (canvasRef.current) {
