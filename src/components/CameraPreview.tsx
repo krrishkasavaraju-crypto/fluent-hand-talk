@@ -41,10 +41,8 @@ const aslAlphabet: Record<string, string> = {
   Y: aslY, Z: aslZ,
 };
 
-// Valid signs that can be detected
+// Valid signs - only letters A-Z
 const validSigns = [
-  "Hello", "Thank you", "Please", "Help", "Yes", "No", 
-  "Good", "Bad", "Friend", "Family", "Love", "Peace",
   "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
   "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
   "U", "V", "W", "X", "Y", "Z"
@@ -214,17 +212,6 @@ const CameraPreview = () => {
               </span>
             </div>
 
-            {/* AI Analysis indicator */}
-            {isCameraOn && isAnalyzing && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="absolute top-4 left-20 flex items-center gap-2 bg-primary/20 backdrop-blur-sm rounded-full px-3 py-1"
-              >
-                <Loader2 className="w-3 h-3 text-primary animate-spin" />
-                <span className="text-xs font-medium text-primary">AI Analyzing</span>
-              </motion.div>
-            )}
 
             {/* Camera controls */}
             <div className="absolute top-4 right-4 flex items-center gap-2">
@@ -311,7 +298,7 @@ const CameraPreview = () => {
                   <Hand className="w-4 h-4 text-primary" />
                   Sign Recognition
                 </h3>
-                <p className="text-xs text-muted-foreground mt-1">AI-powered translation</p>
+                <p className="text-xs text-muted-foreground mt-1">Letter detection (A-Z)</p>
               </div>
 
               <div className="p-4 space-y-4">
