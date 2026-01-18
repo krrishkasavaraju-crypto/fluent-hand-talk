@@ -382,7 +382,7 @@ const CameraPreview = () => {
                     <div className="text-amber-500">
                       <X className="w-8 h-8 mx-auto mb-2" />
                       <p className="text-sm font-medium">Sign unavailable</p>
-                      <p className="text-xs text-muted-foreground mt-1">Try: A, B, C, D, E, F, I, L, O, S, U, V, W, Y</p>
+                      <p className="text-xs text-muted-foreground mt-1">Try: A-I, K-Y (J, Z need motion)</p>
                     </div>
                   ) : isModelLoading ? (
                     <div className="text-muted-foreground">
@@ -413,9 +413,12 @@ const CameraPreview = () => {
                 </div>
 
                 {/* Supported letters */}
-                <div className="text-center">
+                <div className="text-center space-y-1">
                   <p className="text-xs text-muted-foreground">
-                    Supported: A, B, C, D, E, F, I, L, O, S, U, V, W, Y
+                    Supported: A-I, K-Y (24 letters)
+                  </p>
+                  <p className="text-xs text-muted-foreground/70">
+                    J & Z require motion tracking
                   </p>
                 </div>
 
