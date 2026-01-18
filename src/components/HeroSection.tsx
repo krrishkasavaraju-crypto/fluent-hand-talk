@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Video, Mic, MessageSquare } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import CameraPreview from "./CameraPreview";
 
@@ -62,52 +62,8 @@ const HeroSection = () => {
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="relative"
           >
             <CameraPreview />
-
-            {/* Floating feature cards */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.8 }}
-              className="absolute -left-4 top-20 glass-panel rounded-xl p-3 shadow-lg"
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Video className="w-4 h-4 text-primary" />
-                </div>
-                <span className="text-sm font-medium">ASL → Text</span>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.9 }}
-              className="absolute -right-4 top-40 glass-panel rounded-xl p-3 shadow-lg"
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
-                  <Mic className="w-4 h-4 text-accent" />
-                </div>
-                <span className="text-sm font-medium">Speech → Signs</span>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 1 }}
-              className="absolute -left-8 bottom-20 glass-panel rounded-xl p-3 shadow-lg"
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
-                  <MessageSquare className="w-4 h-4 text-success" />
-                </div>
-                <span className="text-sm font-medium">Context Aware</span>
-              </div>
-            </motion.div>
           </motion.div>
         </div>
       </div>
