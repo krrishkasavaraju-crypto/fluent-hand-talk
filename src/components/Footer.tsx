@@ -11,6 +11,7 @@ const Footer = () => {
   const teamMembers = [
     { name: "Carlos Tello Dominguez", role: "Co-Founder & Developer" },
     { name: "Krishna Kasavaraju", role: "Co-Founder & Developer" },
+    { name: "Elena Jin", role: "Co-Founder & Developer" },
   ];
 
   return (
