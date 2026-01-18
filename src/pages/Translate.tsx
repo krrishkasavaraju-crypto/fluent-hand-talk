@@ -240,13 +240,6 @@ const Translate = () => {
                   </div>
                 )}
 
-                {/* AI Analysis indicator */}
-                {isCameraOn && isAnalyzing && (
-                  <div className="absolute top-3 right-3 flex items-center gap-2 bg-primary/20 backdrop-blur-sm rounded-full px-3 py-1">
-                    <Loader2 className="w-3 h-3 text-primary animate-spin" />
-                    <span className="text-xs font-medium text-primary">AI</span>
-                  </div>
-                )}
 
                 {/* Current detected sign overlay */}
                 <AnimatePresence>
