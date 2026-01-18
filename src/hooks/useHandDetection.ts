@@ -416,83 +416,85 @@ const recognizeASLLetter = (landmarks: number[][]): { letter: string; confidence
   }
   
   // ============= PRIORITY 10: FIST VARIATIONS =============
+  // Order matters! Check most distinctive first.
   
-  // X - Index finger bent/hooked, others curled
-  if (!fingers.index && !fingers.middle && !fingers.ring && !fingers.pinky) {
+  // All fist signs share this base condition
+  const allFingersCurled = !fingers.index && !fingers.middle && !fingers.ring && !fingers.pinky;
+  
+  if (allFingersCurled) {
     const indexPip = landmarks[LANDMARK.INDEX_PIP];
+    const indexDip = landmarks[LANDMARK.INDEX_DIP];
     const indexTipToWrist = distance(indexTip, wrist);
     const indexPipToWrist = distance(indexPip, wrist);
-    if (indexTipToWrist < indexPipToWrist) {
-      const conf = calculateConfidence([
-        { expected: false, actual: fingers.index },
-        { expected: false, actual: fingers.middle },
-        { expected: false, actual: fingers.ring },
-        { expected: false, actual: fingers.pinky }
-      ], [indexTipToWrist < indexPipToWrist]);
-      return { letter: 'X', confidence: conf };
-    }
-  }
-  
-  // M - Fist with thumb under three fingers (index, middle, ring over thumb)
-  if (!fingers.index && !fingers.middle && !fingers.ring && !fingers.pinky) {
+    const indexDipToWrist = distance(indexDip, wrist);
+    
+    const thumbToIndex = distance(thumbTip, indexTip);
+    const thumbToMiddle = distance(thumbTip, middleTip);
     const thumbToRing = distance(thumbTip, ringTip);
     const thumbToPinky = distance(thumbTip, pinkyTip);
+    const thumbToIndexMcp = distance(thumbTip, landmarks[LANDMARK.INDEX_MCP]);
+    const thumbToMiddleMcp = distance(thumbTip, landmarks[LANDMARK.MIDDLE_MCP]);
+    const thumbToWrist = distance(thumbTip, wrist);
+    const indexMcpToWrist = distance(landmarks[LANDMARK.INDEX_MCP], wrist);
+    
     const indexTightCurled = isFingerTightlyCurled(landmarks, LANDMARK.INDEX_MCP, LANDMARK.INDEX_PIP, LANDMARK.INDEX_DIP, LANDMARK.INDEX_TIP);
     const middleTightCurled = isFingerTightlyCurled(landmarks, LANDMARK.MIDDLE_MCP, LANDMARK.MIDDLE_PIP, LANDMARK.MIDDLE_DIP, LANDMARK.MIDDLE_TIP);
     const ringTightCurled = isFingerTightlyCurled(landmarks, LANDMARK.RING_MCP, LANDMARK.RING_PIP, LANDMARK.RING_DIP, LANDMARK.RING_TIP);
     
-    if (indexTightCurled && middleTightCurled && ringTightCurled && thumbToRing < 50 && thumbToPinky < 60) {
+    // X - Index finger bent/hooked (tip curled back toward palm, but DIP is raised)
+    // Distinctive: index finger makes a hook shape
+    if (indexTipToWrist < indexPipToWrist && indexDipToWrist > indexTipToWrist * 0.9) {
       const conf = calculateConfidence([
         { expected: false, actual: fingers.index },
         { expected: false, actual: fingers.middle },
         { expected: false, actual: fingers.ring },
         { expected: false, actual: fingers.pinky }
-      ], [thumbToRing < 50, thumbToPinky < 60]);
-      return { letter: 'M', confidence: conf };
+      ], [indexTipToWrist < indexPipToWrist, indexDipToWrist > indexTipToWrist * 0.9]);
+      return { letter: 'X', confidence: conf };
     }
-  }
-  
-  // N - Fist with thumb under two fingers (index, middle over thumb)
-  if (!fingers.index && !fingers.middle && !fingers.ring && !fingers.pinky) {
-    const thumbToMiddle = distance(thumbTip, middleTip);
-    const thumbToRing = distance(thumbTip, ringTip);
-    const indexTightCurled = isFingerTightlyCurled(landmarks, LANDMARK.INDEX_MCP, LANDMARK.INDEX_PIP, LANDMARK.INDEX_DIP, LANDMARK.INDEX_TIP);
-    const middleTightCurled = isFingerTightlyCurled(landmarks, LANDMARK.MIDDLE_MCP, LANDMARK.MIDDLE_PIP, LANDMARK.MIDDLE_DIP, LANDMARK.MIDDLE_TIP);
     
-    if (indexTightCurled && middleTightCurled && thumbToMiddle < 50 && thumbToRing > 60) {
+    // T - Thumb tucked between index and middle (thumb tip near both MCPs but away from fingertips)
+    if (thumbToIndexMcp < 40 && thumbToMiddleMcp < 50 && thumbToIndex > 35 && thumbToMiddle > 35) {
       const conf = calculateConfidence([
         { expected: false, actual: fingers.index },
         { expected: false, actual: fingers.middle },
         { expected: false, actual: fingers.ring },
         { expected: false, actual: fingers.pinky }
-      ], [thumbToMiddle < 50, thumbToRing > 60]);
-      return { letter: 'N', confidence: conf };
-    }
-  }
-  
-  // T - Fist with thumb between index and middle
-  if (!fingers.index && !fingers.middle && !fingers.ring && !fingers.pinky) {
-    const thumbToIndex = distance(thumbTip, indexTip);
-    const thumbToMiddle = distance(thumbTip, middleTip);
-    const thumbToIndexMcp = distance(thumbTip, landmarks[LANDMARK.INDEX_MCP]);
-    const thumbToMiddleMcp = distance(thumbTip, landmarks[LANDMARK.MIDDLE_MCP]);
-    
-    if (thumbToIndexMcp < 45 && thumbToMiddleMcp < 45 && thumbToIndex > 30 && thumbToMiddle > 30) {
-      const conf = calculateConfidence([
-        { expected: false, actual: fingers.index },
-        { expected: false, actual: fingers.middle },
-        { expected: false, actual: fingers.ring },
-        { expected: false, actual: fingers.pinky }
-      ], [thumbToIndexMcp < 45, thumbToMiddleMcp < 45]);
+      ], [thumbToIndexMcp < 40, thumbToMiddleMcp < 50]);
       return { letter: 'T', confidence: conf };
     }
-  }
-  
-  // A - Fist with thumb to the side
-  if (!fingers.index && !fingers.middle && !fingers.ring && !fingers.pinky) {
-    const thumbToWrist = distance(thumbTip, wrist);
-    const indexMcpToWrist = distance(landmarks[LANDMARK.INDEX_MCP], wrist);
-    if (thumbToWrist > indexMcpToWrist * 0.8 && fingers.thumb) {
+    
+    // M - Three fingers (index, middle, ring) curled over thumb
+    // Thumb tip should be visible near ring finger area
+    if (indexTightCurled && middleTightCurled && ringTightCurled) {
+      // Thumb is under fingers, tip near ring/pinky area
+      if (thumbToRing < 55 && thumbToMiddle > 40 && thumbToIndex > 50) {
+        const conf = calculateConfidence([
+          { expected: false, actual: fingers.index },
+          { expected: false, actual: fingers.middle },
+          { expected: false, actual: fingers.ring },
+          { expected: false, actual: fingers.pinky }
+        ], [thumbToRing < 55, thumbToMiddle > 40]);
+        return { letter: 'M', confidence: conf };
+      }
+    }
+    
+    // N - Two fingers (index, middle) curled over thumb
+    // Thumb tip visible between middle and ring
+    if (indexTightCurled && middleTightCurled) {
+      if (thumbToMiddle < 45 && thumbToRing > 50 && thumbToIndex > 40) {
+        const conf = calculateConfidence([
+          { expected: false, actual: fingers.index },
+          { expected: false, actual: fingers.middle },
+          { expected: false, actual: fingers.ring },
+          { expected: false, actual: fingers.pinky }
+        ], [thumbToMiddle < 45, thumbToRing > 50]);
+        return { letter: 'N', confidence: conf };
+      }
+    }
+    
+    // A - Fist with thumb alongside (thumb extended to the side)
+    if (fingers.thumb && thumbToWrist > indexMcpToWrist * 0.75) {
       const conf = calculateConfidence([
         { expected: false, actual: fingers.index },
         { expected: false, actual: fingers.middle },
@@ -502,31 +504,30 @@ const recognizeASLLetter = (landmarks: number[][]): { letter: string; confidence
       ]);
       return { letter: 'A', confidence: conf };
     }
-  }
-  
-  // S - Fist with thumb over fingers
-  if (!fingers.index && !fingers.middle && !fingers.ring && !fingers.pinky && !fingers.thumb) {
-    const conf = calculateConfidence([
-      { expected: false, actual: fingers.index },
-      { expected: false, actual: fingers.middle },
-      { expected: false, actual: fingers.ring },
-      { expected: false, actual: fingers.pinky },
-      { expected: false, actual: fingers.thumb }
-    ]);
-    return { letter: 'S', confidence: conf };
-  }
-  
-  // E - All fingers curled with fingertips touching palm/thumb
-  if (extendedCount === 0) {
-    const indexToThumb = distance(indexTip, thumbTip);
-    const middleToThumb = distance(middleTip, thumbTip);
-    if (indexToThumb < 60 && middleToThumb < 60) {
+    
+    // S - Fist with thumb wrapped over fingers (thumb not extended)
+    if (!fingers.thumb) {
+      // Check thumb is curled over fingers (close to index/middle area)
+      if (thumbToIndex < 60 && thumbToMiddle < 70) {
+        const conf = calculateConfidence([
+          { expected: false, actual: fingers.index },
+          { expected: false, actual: fingers.middle },
+          { expected: false, actual: fingers.ring },
+          { expected: false, actual: fingers.pinky },
+          { expected: false, actual: fingers.thumb }
+        ], [thumbToIndex < 60]);
+        return { letter: 'S', confidence: conf };
+      }
+    }
+    
+    // E - Fingers curled with tips touching thumb (more closed than S)
+    if (thumbToIndex < 50 && thumbToMiddle < 55 && thumbToRing < 60) {
       const conf = calculateConfidence([
         { expected: false, actual: fingers.index },
         { expected: false, actual: fingers.middle },
         { expected: false, actual: fingers.ring },
         { expected: false, actual: fingers.pinky }
-      ], [indexToThumb < 60, middleToThumb < 60]);
+      ], [thumbToIndex < 50, thumbToMiddle < 55]);
       return { letter: 'E', confidence: conf };
     }
   }
